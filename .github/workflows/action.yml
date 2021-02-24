@@ -6,6 +6,9 @@ jobs:
   build:
     strategy:
       fail-fast: false
+      env:
+        VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
+        VCPKG_FEATURE_FLAGS: binarycaching
       matrix:
         name: [
           ubuntu-gcc-autotools,
@@ -217,8 +220,6 @@ jobs:
 
       - name: Configure, build and test with CMake
         env:
-          VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
-          VCPKG_FEATURE_FLAGS: binarycaching
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         if: startsWith(matrix.build-system,'cmake')
