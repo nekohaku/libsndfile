@@ -222,7 +222,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
+          VCPKG_BINARY_SOURCES: GitHub
           VCPKG_FEATURE_FLAGS: binarycaching
         if: startsWith(matrix.build-system,'cmake')
         run: |
