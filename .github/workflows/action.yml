@@ -6,9 +6,6 @@ jobs:
   build:
     strategy:
       fail-fast: false
-      env:
-        VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
-        VCPKG_FEATURE_FLAGS: binarycaching
       matrix:
         name: [
           ubuntu-gcc-autotools,
@@ -189,6 +186,9 @@ jobs:
         run: sudo apt-get install -y autogen ninja-build libogg-dev libvorbis-dev libflac-dev libopus-dev libasound2-dev libsqlite3-dev libspeex-dev
 
       - name: Setup NuGet Credentials
+        env:
+          VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
+          VCPKG_FEATURE_FLAGS: binarycaching
         if: startsWith(matrix.os,'windows')
         shell: 'bash'
         run: >
@@ -222,6 +222,8 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
+          VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
+          VCPKG_FEATURE_FLAGS: binarycaching
         if: startsWith(matrix.build-system,'cmake')
         run: |
           mkdir build
