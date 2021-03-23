@@ -436,13 +436,19 @@ bet2f_array (const tribyte *src, int count, float *dest, float normfact)
 
 static inline void
 lei2f_array (const int *src, int count, float *dest, float normfact)
-{	int 			value ;
-
-	while (--count >= 0)
-	{	value = src [count] ;
-		value = LE2H_32 (value) ;
-		dest [count] = ((float) value) * normfact ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	for (i = 0 ; i < count - 3 ; i += 4)
+	{	__m128i s = _mm_loadu_si128 ((__m128i const *) &src [i]) ;
+		_mm_storeu_ps (&dest [i], _mm_mul_ps (_mm_cvtepi32_ps (s), _mm_set1_ps (normfact))) ;
 		} ;
+#endif
+	for (; i < count ; i ++)
+	{	int value = src [i] ;
+		value = LE2H_32 (value) ;
+		dest [i] = ((float) value) * normfact ;
+		} ;
+
 } /* lei2f_array */
 
 static inline void

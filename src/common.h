@@ -44,6 +44,7 @@
 
 #ifdef USE_SSE2
 #include <immintrin.h>
+#include <emmintrin.h>
 #endif
 
 #ifdef __cplusplus
