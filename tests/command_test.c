@@ -24,6 +24,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <time.h>
+#include <float.h>
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -649,13 +650,13 @@ calc_peak_test (int filetype, const char *filename, int channels)
 		} ;
 
 	sf_command (file, SFC_CALC_SIGNAL_MAX, &peak, sizeof (peak)) ;
-	if (fabs (peak - 0.5) > 1e-5)
+	if (fabs (peak - 0.5) <= DBL_EPSILON)
 	{	printf ("Line %d : Peak value should be %f (is %f).\n", __LINE__, 0.5, peak) ;
 		exit (1) ;
 		} ;
 
 	sf_command (file, SFC_CALC_NORM_SIGNAL_MAX, &peak, sizeof (peak)) ;
-	if (fabs (peak - 0.5) > 1e-5)
+	if (fabs (peak - 0.5) <= DBL_EPSILON)
 	{	printf ("Line %d : Peak value should be %f (is %f).\n", __LINE__, 0.5, peak) ;
 		exit (1) ;
 		} ;

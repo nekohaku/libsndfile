@@ -517,8 +517,18 @@ f2i_clip_array (const float *src, int count, int *dest, float scale)
 
 static inline void
 f2d_array (const float *src, int count, double *dest)
-{	while (--count >= 0)
-	{	dest [count] = src [count] ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	for (; i < count ; i += 4)
+	{	__m128 s = _mm_loadu_ps (&src [i]);
+		__m128d d1 = _mm_cvtps_pd (s) ;
+		__m128d d2 = _mm_cvtps_pd (_mm_unpackhi_ps (s, _mm_setzero_ps ())) ;
+		_mm_storeu_pd (&dest [i], d1) ;
+		_mm_storeu_pd (&dest [i + 2], d2) ;
+		}
+#endif
+	for (; i < count ; i ++)
+	{	dest [i] = src [i] ;
 		} ;
 } /* f2d_array */
 
