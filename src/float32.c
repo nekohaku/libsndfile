@@ -436,9 +436,16 @@ float32_get_capability	(SF_PRIVATE *psf)
 
 static void
 f2s_array (const float *src, int count, short *dest, float scale)
-{
-	while (--count >= 0)
-	{	dest [count] = psf_lrintf (scale * src [count]) ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	for (; i < count - 7 ; i += 8)
+	{	__m128i s1 = _mm_cvtps_epi32 (_mm_mul_ps (_mm_loadu_ps (&src [i]), _mm_set1_ps (scale))) ;
+		__m128i s2 = _mm_cvtps_epi32 (_mm_mul_ps (_mm_loadu_ps (&src [i + 4]), _mm_set1_ps (scale)));
+		_mm_storeu_si128 ((__m128i_u *) &dest [i], _mm_packs_epi32 (s1, s2)) ;
+		}
+#endif
+	for (; i < count ; i ++)
+	{	dest [i] = psf_lrintf (scale * src [i]) ;
 		} ;
 } /* f2s_array */
 
@@ -458,22 +465,41 @@ f2s_clip_array (const float *src, int count, short *dest, float scale)
 
 static inline void
 f2i_array (const float *src, int count, int *dest, float scale)
-{	while (--count >= 0)
-	{	dest [count] = psf_lrintf (scale * src [count]) ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	for (; i < count - 3 ; i += 4)
+	{	__m128 s = _mm_mul_ps (_mm_loadu_ps (&src [i]), _mm_set1_ps (scale)) ;
+		__m128i d = _mm_cvtps_epi32 (s) ;
+		_mm_storeu_si128 ((__m128i_u *) &dest[i], d) ;
+		} ;
+#endif
+	for (; i < count ; i ++)
+	{	dest [i] = psf_lrintf (scale * src [i]) ;
 		} ;
 } /* f2i_array */
 
 static inline void
 f2i_clip_array (const float *src, int count, int *dest, float scale)
-{	while (--count >= 0)
-	{	float tmp = scale * src [count] ;
+{	int i = 0 ;
+
+#ifdef USE_SSE2
+	for (; i < count - 3 ; i += 4)
+	{	__m128 tmp = _mm_mul_ps (_mm_loadu_ps (&src [i]), _mm_set1_ps (scale)) ;
+		tmp = _mm_min_ps (tmp, _mm_set1_ps (1.0 * INT_MAX)) ;
+		tmp = _mm_max_ps (tmp, _mm_set1_ps (-1.0 * INT_MAX)) ;
+		_mm_storeu_si128 ((__m128i_u *) &dest[i], _mm_cvtps_epi32 (tmp)) ;
+		}
+#endif
+
+	for (; i < count ; i ++)
+	{	float tmp = scale * src [i] ;
 
 		if (CPU_CLIPS_POSITIVE == 0 && tmp > (1.0 * INT_MAX))
-			dest [count] = INT_MAX ;
+			dest [i] = INT_MAX ;
 		else if (CPU_CLIPS_NEGATIVE == 0 && tmp < (-1.0 * INT_MAX))
-			dest [count] = INT_MIN ;
+			dest [i] = INT_MIN ;
 		else
-			dest [count] = psf_lrintf (tmp) ;
+			dest [i] = psf_lrintf (tmp) ;
 		} ;
 } /* f2i_clip_array */
 
