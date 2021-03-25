@@ -451,15 +451,27 @@ f2s_array (const float *src, int count, short *dest, float scale)
 
 static void
 f2s_clip_array (const float *src, int count, short *dest, float scale)
-{	while (--count >= 0)
-	{	float tmp = scale * src [count] ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	for (; i < count ; i += 8)
+	{	__m128 s1 = _mm_mul_ps (_mm_loadu_ps (&src [i]), _mm_set1_ps (scale)) ;
+		__m128 s2 = _mm_mul_ps (_mm_loadu_ps (&src [i + 4]), _mm_set1_ps (scale)) ;
+		s1 = _mm_min_ps (s1, _mm_set1_ps (32767.0f)) ;
+		s1 = _mm_max_ps (s1, _mm_set1_ps (-32768.0f)) ;
+		s2 = _mm_min_ps (s2, _mm_set1_ps (32767.0f)) ;
+		s2 = _mm_max_ps (s2, _mm_set1_ps (-32768.0f)) ;
+		_mm_storeu_si128 ((__m128i_u *) &dest [i], _mm_packs_epi32 (_mm_cvtps_epi32 (s1), _mm_cvtps_epi32 (s2))) ;
+		}
+#endif
+	for (; i < count ; i ++)
+	{	float tmp = scale * src [i] ;
 
 		if (CPU_CLIPS_POSITIVE == 0 && tmp > 32767.0)
-			dest [count] = SHRT_MAX ;
+			dest [i] = SHRT_MAX ;
 		else if (CPU_CLIPS_NEGATIVE == 0 && tmp < -32768.0)
-			dest [count] = SHRT_MIN ;
+			dest [i] = SHRT_MIN ;
 		else
-			dest [count] = psf_lrintf (tmp) ;
+			dest [i] = psf_lrintf (tmp) ;
 		} ;
 } /* f2s_clip_array */
 
