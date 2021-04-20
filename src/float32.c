@@ -436,9 +436,20 @@ float32_get_capability	(SF_PRIVATE *psf)
 
 static void
 f2s_array (const float *src, int count, short *dest, float scale)
-{
-	while (--count >= 0)
-	{	dest [count] = psf_lrintf (scale * src [count]) ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	__m128 vscale = _mm_set1_ps (scale) ;
+	for (; i < count - 7 ; i += 8)
+	{	__m128 vsrc1 = _mm_mul_ps (vscale, _mm_loadu_ps (&src [i])) ;
+		__m128 vsrc2 = _mm_mul_ps (vscale, _mm_loadu_ps (&src [i + 4])) ;
+		__m128i vtmp1 = _mm_cvtps_epi32 (vsrc1) ;
+		__m128i vtmp2 = _mm_cvtps_epi32 (vsrc2) ;
+		__m128i vdest = _mm_packs_epi32 (vtmp1, vtmp2) ;
+		_mm_storeu_si128 ((__m128i *) &dest [i], vdest) ;
+		} ;
+#endif
+	for (; i < count ; i++)
+	{	dest [i] = psf_lrintf (scale * src [i]) ;
 		} ;
 } /* f2s_array */
 
@@ -458,50 +469,118 @@ f2s_clip_array (const float *src, int count, short *dest, float scale)
 
 static inline void
 f2i_array (const float *src, int count, int *dest, float scale)
-{	while (--count >= 0)
-	{	dest [count] = psf_lrintf (scale * src [count]) ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	__m128 vscale = _mm_set1_ps (scale) ;
+	for (; i < count - 3 ; i += 4)
+	{	__m128 vsrc = _mm_loadu_ps (&src [i]) ;
+		vsrc = _mm_mul_ps (vscale, vsrc) ;
+		__m128i vdest = _mm_cvtps_epi32 (vsrc) ;
+		_mm_storeu_si128 ((__m128i *) &dest [i], vdest) ;
+		} ;
+#endif
+	for (; i < count ; i++)
+	{	dest [i] = psf_lrintf (scale * src [i]) ;
 		} ;
 } /* f2i_array */
 
 static inline void
 f2i_clip_array (const float *src, int count, int *dest, float scale)
-{	while (--count >= 0)
-	{	float tmp = scale * src [count] ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	__m128 vscale = _mm_set1_ps (scale) ;
+	__m128 vmax = _mm_set1_ps (1.0 * INT_MAX) ;
+	__m128 vmin = _mm_set1_ps (-1.0 * INT_MAX) ;
+	for (; i < count - 3 ; i += 4)
+	{	__m128 vsrc = _mm_loadu_ps (&src [i]) ;
+		vsrc = _mm_min_ps (vsrc, vmax) ;
+		vsrc = _mm_max_ps (vsrc, vmin) ;
+		__m128i vdest = _mm_cvtps_epi32 (vsrc) ;
+		_mm_storeu_si128 ((__m128i *) &dest [i], vdest) ;
+		} ;
+#endif
+	for (; i < count ; i++)
+	{	float tmp = scale * src [i] ;
 
 		if (CPU_CLIPS_POSITIVE == 0 && tmp > (1.0 * INT_MAX))
-			dest [count] = INT_MAX ;
+			dest [i] = INT_MAX ;
 		else if (CPU_CLIPS_NEGATIVE == 0 && tmp < (-1.0 * INT_MAX))
-			dest [count] = INT_MIN ;
+			dest [i] = INT_MIN ;
 		else
-			dest [count] = psf_lrintf (tmp) ;
+			dest [i] = psf_lrintf (tmp) ;
 		} ;
 } /* f2i_clip_array */
 
 static inline void
 f2d_array (const float *src, int count, double *dest)
-{	while (--count >= 0)
-	{	dest [count] = src [count] ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	for (; i < count - 3 ; i += 4)
+	{	__m128 vsrc = _mm_loadu_ps (&src [i]) ;
+		__m128 vsrc_lo = vsrc ;
+		__m128 vsrc_hi = _mm_movehl_ps (_mm_setzero_ps (), vsrc) ;
+		__m128d vdest1 = _mm_cvtps_pd (vsrc_lo) ;
+		__m128d vdest2 = _mm_cvtps_pd (vsrc_hi) ;
+		_mm_storeu_pd (&dest [i], vdest1) ;
+		_mm_storeu_pd (&dest [i + 2], vdest2) ;
+		} ;
+#endif
+	for (; i < count ; i++)
+	{	dest [i] = src [i] ;
 		} ;
 } /* f2d_array */
 
 static inline void
 s2f_array (const short *src, float *dest, int count, float scale)
-{	while (--count >= 0)
-	{	dest [count] = scale * src [count] ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	__m128 vscale = _mm_set1_ps (scale) ;
+	for (; i < count - 7 ; i += 8)
+	{	__m128i vsrc = _mm_loadu_si128 ((const __m128i *) &src [i]) ;
+		__m128i vtmp1 = _mm_srai_epi32(_mm_unpacklo_epi16(vsrc, vsrc), 16);
+		__m128i vtmp2 = _mm_srai_epi32(_mm_unpackhi_epi16(vsrc, vsrc), 16);
+		__m128 vdest1 = _mm_mul_ps (vscale, _mm_cvtepi32_ps (vtmp1)) ;
+		__m128 vdest2 = _mm_mul_ps (vscale, _mm_cvtepi32_ps (vtmp2)) ;
+		_mm_storeu_ps (&dest [i], vdest1) ;
+		_mm_storeu_ps (&dest [i + 4], vdest2) ;
+		} ;
+#endif
+	for (; i < count ; i++)
+	{	dest [i] = scale * src [i] ;
 		} ;
 } /* s2f_array */
 
 static inline void
 i2f_array (const int *src, float *dest, int count, float scale)
-{	while (--count >= 0)
-	{	dest [count] = scale * src [count] ;
+{	int i = 0;
+#ifdef USE_SSE2
+	__m128 vscale = _mm_set1_ps (scale) ;
+	for (; i < count - 3 ; i += 4)
+	{	__m128i vsrc = _mm_loadu_si128 ((const __m128i *) &src [i]) ;
+		__m128 vdest = _mm_mul_ps (vscale, _mm_cvtepi32_ps (vsrc)) ;
+		_mm_storeu_ps (&dest [i], vdest) ;
+		} ;
+#endif
+	for (; i < count ; i++)
+	{	dest [i] = scale * src [i] ;
 		} ;
 } /* i2f_array */
 
 static inline void
 d2f_array (const double *src, float *dest, int count)
-{	while (--count >= 0)
-	{	dest [count] = src [count] ;
+{	int i = 0 ;
+#ifdef USE_SSE2
+	for (; i < count - 3 ; i += 4)
+	{	__m128d vsrc1 = _mm_loadu_pd (&src [i]) ;
+		__m128d vsrc2 = _mm_loadu_pd (&src [i] + 2) ;
+		__m128 vdest1 = _mm_cvtpd_ps (vsrc1) ;
+		__m128 vdest2 = _mm_cvtpd_ps (vsrc2) ;
+		_mm_storel_pi((__m64 *) &dest [i], vdest1) ;
+		_mm_storel_pi((__m64 *) &dest [i + 2], vdest2) ;
+		} ;
+#endif
+	for (; i < count ; i++)
+	{	dest [i] = src [i] ;
 		} ;
 } /* d2f_array */
 
