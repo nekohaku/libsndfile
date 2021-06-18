@@ -104,7 +104,8 @@ void
 psf_log_printf (SF_PRIVATE *psf, const char *format, ...)
 {	va_list		ap ;
 	uint32_t	u ;
-	int			d, tens, shift, width, width_specifier, left_align, slen, precision ;
+	int			tens, shift, width, width_specifier, left_align, slen, precision ;
+	int64_t		d ;
 	char		c, *strptr, istr [5], lead_char, sign_char ;
 
 	va_start (ap, format) ;
