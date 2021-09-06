@@ -222,6 +222,13 @@ jobs:
           cmake .. -G "${{matrix.cmake-generator}}" ${{matrix.cmake-options}}
           cmake --build . --config Release
           ctest
+          
+      - name: Publish build artifact
+        run: echo Uploading...
+      - uses: actions/upload-artifact@v2
+        with:
+          name: my-artifact
+          path: build/Release/
 
       - name: Configure, build and test with OSSFuzz
         env:
